@@ -73,11 +73,12 @@ module IRB
 
       self.prompt_mode = IRB.conf[:PROMPT_MODE]
 
-      if IRB.conf[:SINGLE_IRB] or !defined?(IRB::JobManager)
-        @irb_name = IRB.conf[:IRB_NAME]
-      else
-        @irb_name = IRB.conf[:IRB_NAME]+"#"+IRB.JobManager.n_jobs.to_s
+      @irb_name = IRB.conf[:IRB_NAME]
+
+      unless IRB.conf[:SINGLE_IRB] or !defined?(IRB::JobManager)
+        @irb_name = @irb_name + "#" + IRB.JobManager.n_jobs.to_s
       end
+
       self.irb_path = "(" + @irb_name + ")"
 
       case input_method
@@ -601,10 +602,13 @@ module IRB
         set_last_value(result)
       when Statement::Command
         statement.command_class.execute(self, statement.arg)
-        set_last_value(nil)
       end
 
       nil
+    end
+
+    def from_binding?
+      @irb.from_binding
     end
 
     def evaluate_expression(code, line_no) # :nodoc:

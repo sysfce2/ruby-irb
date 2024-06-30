@@ -931,8 +931,11 @@ module IRB
     # The lexer used by this irb session
     attr_accessor :scanner
 
+    attr_reader :from_binding
+
     # Creates a new irb session
-    def initialize(workspace = nil, input_method = nil)
+    def initialize(workspace = nil, input_method = nil, from_binding: false)
+      @from_binding = from_binding
       @context = Context.new(self, workspace, input_method)
       @context.workspace.load_helper_methods_to_main
       @signal_status = :IN_IRB
@@ -1135,6 +1138,8 @@ module IRB
       end
     end
 
+    ASSIGN_OPERATORS_REGEXP = Regexp.union(%w[= += -= *= /= %= **= &= |= &&= ||= ^= <<= >>=])
+
     def parse_command(code)
       command_name, arg = code.strip.split(/\s+/, 2)
       return unless code.lines.size == 1 && command_name
@@ -1145,6 +1150,12 @@ module IRB
       if (alias_name = @context.command_aliases[command])
         return [alias_name, arg]
       end
+
+      # Assignment-like expression is not a command
+      return if arg.start_with?(ASSIGN_OPERATORS_REGEXP) && !arg.start_with?(/==|=~/)
+
+      # Local variable have precedence over command
+      return if @context.local_variables.include?(command)
 
       # Check visibility
       public_method = !!Kernel.instance_method(:public_method).bind_call(@context.main, command) rescue false
@@ -1596,7 +1607,7 @@ class Binding
     else
       # If we're not in a debugger session, create a new IRB instance with the current
       # workspace
-      binding_irb = IRB::Irb.new(workspace)
+      binding_irb = IRB::Irb.new(workspace, from_binding: true)
       binding_irb.context.irb_path = irb_path
       binding_irb.run(IRB.conf)
       binding_irb.debug_break
