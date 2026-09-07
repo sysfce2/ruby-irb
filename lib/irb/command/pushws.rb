@@ -15,20 +15,21 @@ module IRB
       description "Show workspaces."
 
       def execute(_arg)
-        inspection_resuls = irb_context.instance_variable_get(:@workspace_stack).map do |ws|
+        inspection_results = irb_context.instance_variable_get(:@workspace_stack).map do |ws|
           truncated_inspect(ws.main)
         end
 
-        puts "[" + inspection_resuls.join(", ") + "]"
+        puts "[" + inspection_results.join(", ") + "]"
       end
 
       private
 
       def truncated_inspect(obj)
+        threshold = 20
         obj_inspection = obj.inspect
 
-        if obj_inspection.size > 20
-          obj_inspection = obj_inspection[0, 19] + "...>"
+        if obj_inspection.size > threshold
+          obj_inspection = obj_inspection[0, threshold - 1] + "...>"
         end
 
         obj_inspection
